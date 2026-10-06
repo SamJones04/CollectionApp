@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>InPost Tour Map</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+    <style>
+      :root {
+        --yellow: #ffcc00;
+        --black: #171717;
+        --charcoal: #292929;
+        --grey: #777;
+        --pale: #f3f3f3;
+        --line: #d6d6d6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #202020;
+        background: #f3f3f3;
+      }
+      header {
+        background: var(--black);
+        color: #fff;
+        padding: 13px 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        border-bottom: 5px solid var(--yellow);
+      }
+      .brand {
+        font-size: 21px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+      }
+      .brand span {
+        color: var(--yellow);
+      }
+      .subtitle {
+        font-size: 12px;
+        color: #ccc;
+        margin-top: 3px;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 310px minmax(0, 1fr);
+        height: calc(100vh - 68px);
+        min-height: 450px;
+      }
+      aside {
+        background: #fff;
+        border-right: 1px solid var(--line);
+        padding: 14px;
+        overflow: auto;
+      }
+      #map {
+        height: 100%;
+        width: 100%;
+        background: #ddd;
+      }
+      .section {
+        margin-bottom: 17px;
+      }
+      .section h2 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #666;
+        margin: 0 0 9px;
+      }
+      button,
+      .file-button {
+        border: 0;
+        border-radius: 4px;
+        padding: 10px 12px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      button:focus-visible,
+      .file-button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid #f0b900;
+        outline-offset: 2px;
+      }
+      .primary {
+        background: var(--yellow);
+        color: #111;
+      }
+      .dark {
+        background: #222;
+        color: #fff;
+      }
+      .light {
+        background: #eee;
+        color: #222;
+        border: 1px solid #ddd;
+      }
+      button:hover,
+      .file-button:hover {
+        filter: brightness(0.94);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .controls {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .controls button {
+        flex: 1;
+      }
+      .file-button {
+        display: block;
+        background: var(--yellow);
+        color: #111;
+        text-align: center;
+        margin-bottom: 7px;
+      }
+      input[type="file"] {
+        display: none;
+      }
+      input[type="search"],
+      input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .hint {
+        font-size: 12px;
+        line-height: 1.45;
+        color: #666;
+        margin: 7px 0 0;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+      }
+      .stat {
+        background: #f4f4f4;
+        padding: 10px;
+        border-left: 3px solid var(--yellow);
+        border-radius: 3px;
+      }
+      .stat strong {
+        display: block;
+        font-size: 20px;
+      }
+      .stat span {
+        font-size: 11px;
+        color: #666;
+      }
+      .tour-actions {
+        display: flex;
+        gap: 6px;
+        margin: 8px 0;
+      }
+      .tour-actions button {
+        padding: 7px 9px;
+        font-size: 11px;
+      }
+      #tourList {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 42vh;
+        overflow: auto;
+      }
+      .tour-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 8px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      .tour-row:hover {
+        background: #fafafa;
+      }
+      .tour-row input {
+        accent-color: #e6b800;
+      }
+      .tour-name {
+        flex: 1;
+        overflow-wrap: anywhere;
+      }
+      .swatch {
+        width: 13px;
+        height: 13px;
+        border-radius: 3px;
+        border: 1px solid #555;
+        flex-shrink: 0;
+      }
+      .count {
+        color: #777;
+        font-size: 11px;
+      }
+      .status {
+        font-size: 12px;
+        padding: 9px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+      .legend-note {
+        font-size: 11px;
+        color: #777;
+        margin-top: 7px;
+      }
+      .leaflet-popup-content-wrapper {
+        border-radius: 5px;
+      }
+      .popup-title {
+        font-weight: 800;
+        margin-bottom: 5px;
+      }
+      .popup-line {
+        margin: 3px 0;
+        font-size: 12px;
+      }
+      .tag {
+        display: inline-block;
+        background: #ffcc00;
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-weight: 700;
+      }
+
+      /* Custom Label Marker Styling */
+      .tour-marker {
+        position: relative;
+        min-width: 48px;
+        padding: 2px 6px;
+        height: 26px;
+        line-height: 22px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 12px;
+        border: 2px solid #111;
+        border-radius: 2px;
+        box-sizing: border-box;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      }
+
+      .tour-marker::after {
+        content: "";
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 8px solid #111;
+      }
+
+      .tour-marker::before {
+        content: "";
+        position: absolute;
+        bottom: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 6px solid var(--marker-bg, #111);
+        z-index: 1;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto minmax(330px, 1fr);
+          height: auto;
+          min-height: calc(100vh - 68px);
+        }
+        aside {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+          max-height: none;
+          overflow: visible;
+        }
+        #map {
+          height: 58vh;
+          min-height: 330px;
+        }
+        #tourList {
+          max-height: 220px;
+        }
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <div class="brand">InPost · TOUR MAP</div>
+        <div class="subtitle">Location overview · Leaflet JS</div>
+      </div>
+    </header>
+    <main>
+      <aside>
+        <div class="section">
+          <h2>Load locations</h2>
+          <label class="file-button" for="fileInput"
+            >Choose data.json / Excel / CSV</label
+          >
+          <input
+            id="fileInput"
+            type="file"
+            accept=".json,.csv,.tsv,.txt,.xlsx,.xls"
+          />
+          <div class="hint">
+            Supports your data.json format (latitude, longitude, planned_tours,
+            inpost_id, name, postcode) plus CSV and Excel.
+          </div>
+          <div class="status" id="status">
+            No file loaded. Choose data.json, CSV or an Excel workbook to plot
+            your locations.
+          </div>
+        </div>
+        <div class="section">
+          <h2>Map controls</h2>
+          <div class="controls">
+            <button class="dark" id="clusterBtn" aria-pressed="true">
+              Clustering: ON
+            </button>
+            <button class="light" id="fitBtn">Fit locations</button>
+          </div>
+          <div class="controls" style="margin-top: 7px">
+            <button class="primary" id="randomBtn">
+              Randomise tour colours
+            </button>
+            <button class="light" id="clearBtn">Clear map</button>
+          </div>
+          <p class="hint">
+            Clustering groups nearby pins when zoomed out. Turn it off to show
+            each location marker separately.
+          </p>
+        </div>
+        <div class="section">
+          <h2>Overview</h2>
+          <div class="stats">
+            <div class="stat">
+              <strong id="totalCount">0</strong><span>Locations loaded</span>
+            </div>
+            <div class="stat">
+              <strong id="tourCount">0</strong><span>Unique tours</span>
+            </div>
+            <div class="stat">
+              <strong id="visibleCount">0</strong><span>Locations shown</span>
+            </div>
+            <div class="stat">
+              <strong id="invalidCount">0</strong><span>Rows skipped</span>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <h2>Filter tours</h2>
+          <input
+            id="tourSearch"
+            type="search"
+            placeholder="Search tours…"
+            aria-label="Search tours"
+          />
+          <div class="tour-actions">
+            <button class="light" id="selectAllBtn">Select all</button>
+            <button class="light" id="selectNoneBtn">Select none</button>
+          </div>
+          <div id="tourList">
+            <div class="hint">Load a file to see tours here.</div>
+          </div>
+          <div class="legend-note">
+            Tick one or more tours to show them on the map. Each tour receives
+            its own colour.
+          </div>
+        </div>
+      </aside>
+      <div
+        id="map"
+        role="application"
+        aria-label="Map of locations by planned tour"
+      ></div>
+    </main>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+      (() => {
+        const $ = (id) => document.getElementById(id);
+        const map = L.map("map", { preferCanvas: true }).setView(
+          [54.6, -1.5],
+          8,
+        );
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        }).addTo(map);
+
+        const palette = [
+          "#ffcc00",
+          "#222222",
+          "#777777",
+          "#e76f00",
+          "#2878b5",
+          "#8b5fbf",
+          "#16856b",
+          "#d64f70",
+          "#6b7d2a",
+          "#a65b2e",
+        ];
+        let rows = [],
+          tours = new Map(),
+          colours = new Map(),
+          markersByTour = new Map();
+        let clusterOn = true,
+          clusterLayer = L.markerClusterGroup({
+            showCoverageOnHover: false,
+            spiderfyOnMaxZoom: true,
+            maxClusterRadius: 55,
+          });
+        let plainLayer = L.layerGroup();
+        map.addLayer(clusterLayer);
+
+        function norm(s) {
+          return String(s ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "");
+        }
+        function getVal(obj, aliases) {
+          const keys = Object.keys(obj || {});
+          for (const a of aliases) {
+            const k = keys.find((x) => norm(x) === norm(a));
+            if (
+              k !== undefined &&
+              obj[k] !== undefined &&
+              obj[k] !== null &&
+              String(obj[k]).trim() !== ""
+            )
+              return obj[k];
+          }
+          return "";
+        }
+        function num(v) {
+          if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+          return Number(
+            String(v ?? "")
+              .trim()
+              .replace(",", "."),
+          );
+        }
+        function hashColor(str) {
+          let h = 0;
+          for (let i = 0; i < str.length; i++)
+            h = (h * 31 + str.charCodeAt(i)) | 0;
+          const hue = Math.abs(h) % 360;
+          return `hsl(${hue} 62% 43%)`;
+        }
+
+        function getContrastYIQ(color) {
+          const dummy = document.createElement("div");
+          dummy.style.color = color;
+          document.body.appendChild(dummy);
+          const computed = getComputedStyle(dummy).color;
+          document.body.removeChild(dummy);
+
+          const rgb = computed.match(/\d+/g);
+          if (!rgb) return "#ffffff";
+          const yiq = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
+          return yiq >= 128 ? "#000000" : "#ffffff";
+        }
+        function randomiseColours() {
+          const keys = [...tours.keys()];
+          const used = new Set();
+          keys.forEach((k) => {
+            let c,
+              tries = 0;
+            do {
+              const hue = Math.floor(Math.random() * 360);
+              const sat = 65 + Math.floor(Math.random() * 25);
+              const light = 40 + Math.floor(Math.random() * 25);
+              c = `hsl(${hue}, ${sat}%, ${light}%)`;
+              tries++;
+            } while (used.has(c) && tries < 20);
+            used.add(c);
+            colours.set(k, c);
+          });
+          renderTours();
+          redrawMarkers();
+        }
+
+        function createTourMarker(lat, lng, tour, colour) {
+          const textColor = getContrastYIQ(colour);
+          const icon = L.divIcon({
+            className: "",
+            html: `
+              <div class="tour-marker" style="background:${colour}; color:${textColor}; --marker-bg:${colour};">
+                 ${escapeHtml(tour)}
+              </div>
+            `,
+            iconSize: [50, 34],
+            iconAnchor: [25, 34],
+            popupAnchor: [0, -34]
+          });
+
+          return L.marker([lat, lng], { icon: icon });
+        }
+
+        function createMarker(r) {
+          const color = colours.get(r.tour) || hashColor(r.tour);
+          const marker = createTourMarker(r.lat, r.lon, r.tour, color);
+          
+          let content = `<div class="popup-title">${escapeHtml(r.tour)}</div>`;
+          if (r.locationId) {
+            content += `<div class="popup-line"><strong>ID:</strong> ${escapeHtml(r.locationId)}</div>`;
+          }
+          if (r.raw.name) {
+            content += `<div class="popup-line"><strong>Name:</strong> ${escapeHtml(r.raw.name)}</div>`;
+          }
+          if (r.raw.postcode) {
+            content += `<div class="popup-line"><strong>Postcode:</strong> ${escapeHtml(r.raw.postcode)}</div>`;
+          }
+          marker.bindPopup(content);
+          return marker;
+        }
+
+        function escapeHtml(s) {
+          return String(s).replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+        }
+        function selectedTours() {
+          return new Set(
+            [...document.querySelectorAll(".tour-check:checked")].map(
+              (x) => x.value,
+            ),
+          );
+        }
+        function redrawMarkers() {
+          clusterLayer.clearLayers();
+          plainLayer.clearLayers();
+          markersByTour.clear();
+          const selected = selectedTours();
+          let visible = 0;
+          rows.forEach((r) => {
+            if (!selected.has(r.tour)) return;
+            const marker = createMarker(r);
+            visible++;
+            if (!markersByTour.has(r.tour)) markersByTour.set(r.tour, []);
+            markersByTour.get(r.tour).push(marker);
+            if (clusterOn) clusterLayer.addLayer(marker);
+            else plainLayer.addLayer(marker);
+          });
+          if (clusterOn) {
+            if (!map.hasLayer(clusterLayer)) map.addLayer(clusterLayer);
+            if (map.hasLayer(plainLayer)) map.removeLayer(plainLayer);
+          } else {
+            if (!map.hasLayer(plainLayer)) map.addLayer(plainLayer);
+            if (map.hasLayer(clusterLayer)) map.removeLayer(clusterLayer);
+          }
+          $("visibleCount").textContent = visible.toLocaleString();
+        }
+        function renderTours() {
+          const container = $("tourList"),
+            search = $("tourSearch").value.trim().toLowerCase(),
+            selected = selectedTours();
+          container.innerHTML = "";
+          const names = [...tours.keys()].sort((a, b) =>
+            a.localeCompare(b, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            }),
+          );
+          const filtered = names.filter((n) =>
+            n.toLowerCase().includes(search),
+          );
+          if (!filtered.length) {
+            container.innerHTML = '<div class="hint">No matching tours.</div>';
+            return;
+          }
+          filtered.forEach((name) => {
+            const colour = colours.get(name) || hashColor(name);
+            const label = document.createElement("label");
+            label.className = "tour-row";
+            const check = document.createElement("input");
+            check.type = "checkbox";
+            check.className = "tour-check";
+            check.value = name;
+            check.checked = selected.has(name);
+            check.addEventListener("change", redrawMarkers);
+            const swatch = document.createElement("span");
+            swatch.className = "swatch";
+            swatch.style.background = colour;
+            const text = document.createElement("span");
+            text.className = "tour-name";
+            text.textContent = name;
+            const count = document.createElement("span");
+            count.className = "count";
+            count.textContent = tours.get(name).length;
+            label.append(check, swatch, text, count);
+            container.appendChild(label);
+          });
+        }
+        function loadObjects(objects, fileName) {
+          rows = [];
+          tours = new Map();
+          colours = new Map();
+          let skipped = 0;
+          const latAliases = ["latitude", "lat", "y", "gpslatitude"];
+          const lonAliases = [
+            "longitude",
+            "lon",
+            "lng",
+            "long",
+            "x",
+            "gpslongitude",
+          ];
+          const tourAliases = [
+            "planned_tours",
+            "planned_tour",
+            "planned tours",
+            "planned tour",
+            "plan tour",
+            "plantour",
+            "tour",
+            "tourcode",
+            "route",
+            "routecode",
+          ];
+          const idAliases = [
+            "inpost_id",
+            "inpost id",
+            "location id",
+            "location_id",
+            "loc-v5",
+            "locv5",
+            "locationid",
+            "id",
+            "barcode",
+            "code",
+          ];
+          objects.forEach((raw, index) => {
+            const lat = num(getVal(raw, latAliases)),
+              lon = num(getVal(raw, lonAliases));
+            let tour = String(getVal(raw, tourAliases) || "Unassigned").trim();
+            if (
+              !Number.isFinite(lat) ||
+              !Number.isFinite(lon) ||
+              lat < -90 ||
+              lat > 90 ||
+              lon < -180 ||
+              lon > 180
+            ) {
+              skipped++;
+              return;
+            }
+            const locationId = String(getVal(raw, idAliases) || "");
+            const row = { lat, lon, tour, locationId, raw };
+            rows.push(row);
+            if (!tours.has(tour)) tours.set(tour, []);
+            tours.get(tour).push(row);
+          });
+          [...tours.keys()].forEach((t, i) =>
+            colours.set(t, palette[i % palette.length] || hashColor(t)),
+          );
+          $("totalCount").textContent = rows.length.toLocaleString();
+          $("tourCount").textContent = tours.size.toLocaleString();
+          $("invalidCount").textContent = skipped.toLocaleString();
+          $("status").textContent =
+            `Loaded ${rows.length.toLocaleString()} locations from ${fileName}. ${skipped ? skipped + " row(s) skipped due to missing or invalid coordinates." : "All coordinate rows were valid."}`;
+          $("tourSearch").value = "";
+          renderTours();
+          document
+            .querySelectorAll(".tour-check")
+            .forEach((c) => (c.checked = true));
+          redrawMarkers();
+          fitLocations();
+        }
+        function fitLocations() {
+          const selected = selectedTours(),
+            pts = rows
+              .filter((r) => selected.has(r.tour))
+              .map((r) => [r.lat, r.lon]);
+          if (pts.length)
+            map.fitBounds(L.latLngBounds(pts).pad(0.08), { maxZoom: 15 });
+        }
+        $("fileInput").addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const buffer = await file.arrayBuffer();
+            let objects;
+            const lowerName = file.name.toLowerCase();
+            if (lowerName.endsWith(".json")) {
+              const text = new TextDecoder("utf-8").decode(buffer);
+              const parsed = JSON.parse(text);
+              objects = Array.isArray(parsed)
+                ? parsed
+                : Array.isArray(parsed.locations)
+                  ? parsed.locations
+                  : null;
+              if (!objects)
+                throw new Error(
+                  "JSON must be an array of location objects, or an object with a locations array.",
+                );
+            } else {
+              let workbook;
+              if (
+                lowerName.endsWith(".csv") ||
+                lowerName.endsWith(".tsv") ||
+                lowerName.endsWith(".txt")
+              ) {
+                const text = new TextDecoder("utf-8").decode(buffer);
+                workbook = XLSX.read(text, {
+                  type: "string",
+                  cellDates: false,
+                });
+              } else
+                workbook = XLSX.read(buffer, {
+                  type: "array",
+                  cellDates: false,
+                });
+              const first = workbook.SheetNames[0],
+                sheet = workbook.Sheets[first];
+              objects = XLSX.utils.sheet_to_json(sheet, {
+                defval: "",
+                raw: true,
+              });
+            }
+            if (!objects.length)
+              throw new Error("The file is empty or could not be read.");
+            loadObjects(objects, file.name);
+          } catch (err) {
+            $("status").textContent = "Could not load file: " + err.message;
+          }
+          e.target.value = "";
+        });
+        $("clusterBtn").addEventListener("click", () => {
+          clusterOn = !clusterOn;
+          $("clusterBtn").textContent =
+            "Clustering: " + (clusterOn ? "ON" : "OFF");
+          $("clusterBtn").setAttribute("aria-pressed", String(clusterOn));
+          redrawMarkers();
+        });
+        $("fitBtn").addEventListener("click", fitLocations);
+        $("randomBtn").addEventListener("click", randomiseColours);
+        $("clearBtn").addEventListener("click", () => {
+          rows = [];
+          tours = new Map();
+          colours = new Map();
+          markersByTour.clear();
+          clusterLayer.clearLayers();
+          plainLayer.clearLayers();
+          $("totalCount").textContent = "0";
+          $("tourCount").textContent = "0";
+          $("visibleCount").textContent = "0";
+          $("invalidCount").textContent = "0";
+          $("tourList").innerHTML =
+            '<div class="hint">Load a file to see tours here.</div>';
+          $("status").textContent =
+            "Map cleared. Choose data.json, CSV or an Excel workbook to load locations.";
+          map.setView([54.6, -1.5], 8);
+        });
+        $("tourSearch").addEventListener("input", renderTours);
+        $("selectAllBtn").addEventListener("click", () => {
+          document
+            .querySelectorAll(".tour-check")
+            .forEach((c) => (c.checked = true));
+          redrawMarkers();
+        });
+        $("selectNoneBtn").addEventListener("click", () => {
+          document
+            .querySelectorAll(".tour-check")
+            .forEach((c) => (c.checked = false));
+          redrawMarkers();
+        });
+      })();
+    </script>
+  </body>
+</html>
